@@ -8,10 +8,6 @@ import PnlChart from "./api/pnlChart";
 import deposit from "./api/deposit";
 import dashboard from "./api/dashboard";
 import remove from "./api/remove";
-import path from 'path';
-
-import swaggerUi from "swagger-ui-express";
-import YAML from 'yamljs';
 
 dotenv.config();
 
@@ -19,7 +15,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const dbConnectionString = process.env.DB_CONNECTION_STRING as string;
+const dbConnectionString = 'mongodb://13.124.232.227:27017/yuccaDB'
 
 mongoose.disconnect().then(() => {
     console.log('Existing database connection closed');
