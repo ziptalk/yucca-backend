@@ -2,7 +2,7 @@ import app from './app';
 import {scheduleJob} from 'node-schedule';
 import {saveBotBalance} from './services/balanceService';
 
-const HTTP_PORT = 3000;
+const HTTP_PORT = 3007;
 const HTTPS_PORT = 443;
 
 app.listen(HTTP_PORT, () => {
