@@ -46,38 +46,44 @@ router.get('/yucca/dashboard', async (req, res) => {
         let totalBalance = 0;
         let totalProfit = 0;
         // 총 밸런스와 총 수익을 계산하기 위한 변수를 초기화.
-        const botDataPromises = bots.map(async (bot) => {
-            try {
-                const latestBalance = await getBalance(bot.address);
-                const totalStakedAmount = await getTotalStakedAmount(bot.bot_id, user_id);
 
-                if (latestBalance && totalStakedAmount) {
-                    const totalProfitPerBot = await getProfitPerBot(bot.bot_id, user_id);
-                    const dailyProfitPerBot = await getProfitPerBot(bot.bot_id, undefined, true);
-
-                    totalProfit += totalProfitPerBot * totalStakedAmount;
-                    totalBalance += totalStakedAmount;
-
-                    if (!token || (token && bot.chain === token)) {
-                        botDataMap.set(bot.bot_id, {
-                            bot_id: bot.bot_id,
-                            bot_address: bot.address,
-                            bot_name: bot.name,
-                            total_investment: totalStakedAmount,
-                            current_value: totalStakedAmount * (1 + totalProfitPerBot),
-                            daily_pnl: dailyProfitPerBot * totalStakedAmount,
-                            total_profit: totalProfitPerBot * totalStakedAmount,
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error(`Error processing bot ${bot.bot_id}:`, error);
+        for (let botId of botIds) {
+            const bot: iBot | null = await Bot.findOne({ bot_id: botId }).exec();
+            if (!bot) {
+                return res.status(404).json({ success: false, message: 'Bot not found' });
             }
-        });
+            // bot_id로 봇을 조회하고, 해당 봇이 없으면 404 오류 반환.
 
-        // 모든 비동기 작업이 완료될 때까지 대기
-        await Promise.all(botDataPromises);
+            const latestBalance = await getBalance(bot.address);
+            const totalStakedAmount = await getTotalStakedAmount(botId, user_id);
+            // 각 봇의 최신 밸런스와 특정 유저가 스테이킹한 총 금액을 가져옴.
 
+            console.log(totalStakedAmount, latestBalance);
+            // 최신 밸런스와 스테이킹 금액을 콘솔에 출력.
+
+            if (bot && latestBalance && totalStakedAmount) {
+                const totalProfitPerBot = await getProfitPerBot(botId, user_id);
+                const dailyProfitPerBot = await getProfitPerBot(botId, undefined, true);
+                // 봇별로 총 수익과 일일 수익을 가져옴.
+
+                totalProfit += totalProfitPerBot * totalStakedAmount;
+                totalBalance += totalStakedAmount;
+                // 각 봇의 수익과 스테이킹 금액을 총합에 더함.
+
+                if (!token || (token && bot.chain === token)) {
+                    botDataMap.set(botId, {
+                        bot_id: bot.bot_id,
+                        bot_address: bot.address,
+                        bot_name: bot.name,
+                        total_investment: totalStakedAmount,
+                        current_value: totalStakedAmount * (1 + totalProfitPerBot),
+                        daily_pnl: dailyProfitPerBot * totalStakedAmount,
+                        total_profit: totalProfitPerBot * totalStakedAmount
+                    });
+                }
+                // 유저가 입력한 token이 없거나, 봇의 체인과 일치하는 경우 봇 데이터를 저장.
+            }
+        }
 
         const botsData = Array.from(botDataMap.values());
         // Map 객체에 저장된 봇 데이터를 배열로 변환.
