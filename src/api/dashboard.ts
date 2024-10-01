@@ -15,12 +15,11 @@ interface QueryParams {
 }
 // 쿼리 매개변수 타입 정의. user_id와 token이 있을 수 있음.
 
-const NTRNUSDT = 0.35;
-// NTRN 토큰의 USDT 환산율을 상수로 정의.
+const NTRNUSDT = 0.35;// NTRN 토큰의 USDT 환산율을 상수로 정의.
+const domesticRage = 10.3; // 예시에서 요구한 USD/token 값을 상수로 정의.
+
 
 router.get('/yucca/dashboard', async (req, res) => {
-// GET 요청을 '/yucca/dashboard' 엔드포인트에서 처리하는 라우트를 설정.
-
     try {
         const { user_id, token }: QueryParams = req.query;
         // 요청 쿼리에서 user_id와 token 값을 추출.
@@ -58,9 +57,6 @@ router.get('/yucca/dashboard', async (req, res) => {
             const totalStakedAmount = await getTotalStakedAmount(botId, user_id);
             // 각 봇의 최신 밸런스와 특정 유저가 스테이킹한 총 금액을 가져옴.
 
-            console.log(totalStakedAmount, latestBalance);
-            // 최신 밸런스와 스테이킹 금액을 콘솔에 출력.
-
             if (bot && latestBalance && totalStakedAmount) {
                 const totalProfitPerBot = await getProfitPerBot(botId, user_id);
                 const dailyProfitPerBot = await getProfitPerBot(botId, undefined, true);
@@ -73,15 +69,13 @@ router.get('/yucca/dashboard', async (req, res) => {
                 if (!token || (token && bot.chain === token)) {
                     botDataMap.set(botId, {
                         bot_id: bot.bot_id,
-                        bot_address: bot.address,
                         bot_name: bot.name,
                         total_investment: totalStakedAmount,
                         current_value: totalStakedAmount * (1 + totalProfitPerBot),
                         daily_pnl: dailyProfitPerBot * totalStakedAmount,
-                        total_profit: totalProfitPerBot * totalStakedAmount
+                        total_profit: totalProfitPerBot * totalStakedAmount,
                     });
                 }
-                // 유저가 입력한 token이 없거나, 봇의 체인과 일치하는 경우 봇 데이터를 저장.
             }
         }
 
@@ -93,9 +87,10 @@ router.get('/yucca/dashboard', async (req, res) => {
             total_profit: totalProfit,
             total_balance_usdt: totalBalance * NTRNUSDT,
             total_profit_usdt: totalProfit * NTRNUSDT,
-            bots: botsData
+            domesticRage: domesticRage, // 응답에 domesticRage 추가
+            bots: botsData,
         };
-        // 총 밸런스, 총 수익 및 이를 USDT로 환산한 값, 그리고 봇 정보를 포함한 대시보드 데이터를 생성.
+        // 총 밸런스, 총 수익, 이를 USDT로 환산한 값, 그리고 봇 정보를 포함한 대시보드 데이터를 생성.
 
         console.log(dashboardData);
         // 대시보드 데이터를 콘솔에 출력.
@@ -109,7 +104,6 @@ router.get('/yucca/dashboard', async (req, res) => {
         // 에러가 발생하면 500 상태 코드와 함께 오류 메시지를 반환.
     }
 });
-
 
 export default router;
 // 라우터 모듈을 익스포트.
