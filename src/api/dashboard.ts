@@ -12,121 +12,109 @@ interface QueryParams {
 }
 
 const NTRNUSDT = 0.35;
-const domesticRage = 10.3;
 
 router.get('/yucca/dashboard', async (req, res) => {
     try {
+        // 요청 쿼리에서 user_id와 token 값을 추출.
         const { user_id, token }: QueryParams = req.query;
 
+        // user_id 로그 출력
         console.log("받은 user_id:", user_id);
 
         if (!user_id) {
-            return res.status(400).json({ error: '유저 ID가 필요합니다.' });
+            // user_id가 없으면 오류 로그 출력
+            console.error('User ID가 제공되지 않았습니다.');
+            return res.status(400).json({ error: 'User ID is required' });
         }
 
+        // MongoDB에서 유저 정보 조회
         const user = await User.findOne({ user_id: user_id });
-        console.log("조회된 유저 정보: ", user);
+        console.log("조회된 유저 정보:", user);
 
         if (!user) {
-            return res.status(404).json({ error: '유저를 찾을 수 없습니다.' });
+            // 유저가 없으면 로그 출력 후 오류 반환
+            console.error(`User not found: user_id=${user_id}`);
+            return res.status(404).json({ error: 'User not found' });
         }
 
+        // Bot 모델에서 모든 봇 데이터를 조회
         const bots: iBot[] = await Bot.find({}).exec();
-        console.log("조회된 봇들: ", bots);
+        console.log("조회된 봇들:", bots);
 
-        if (bots.length === 0) {
-            return res.status(404).json({ error: '유저에게 할당된 봇이 없습니다.' });
-        }
-
+        // 각 봇의 ID 배열을 생성
         const botIds = bots.map(bot => bot.bot_id);
-        const botDataMap = new Map<string, any>();
 
+        const botDataMap = new Map<string, any>();
         let totalBalance = 0;
         let totalProfit = 0;
 
+        // 각 봇에 대한 데이터를 순회하며 처리
         for (let botId of botIds) {
+            // 봇 정보 조회
             const bot: iBot | null = await Bot.findOne({ bot_id: botId }).exec();
+            console.log(`조회된 봇: ${botId}`, bot);
+
             if (!bot) {
-                console.log(`봇 ${botId}를 찾을 수 없습니다.`);
-                continue; // 봇을 찾지 못하면 다음으로 넘어갑니다.
+                // 봇이 없으면 오류 로그 출력
+                console.error(`Bot not found: bot_id=${botId}`);
+                return res.status(404).json({ success: false, message: 'Bot not found' });
             }
 
-            let latestBalance;
-            let totalStakedAmount;
+            // 봇의 최신 잔액 조회
+            const latestBalance = await getBalance(bot.address);
+            console.log(`봇 ${botId}의 최신 잔액:`, latestBalance);
 
-            try {
-                latestBalance = await getBalance(bot.address);
-                console.log(`봇 ${bot.bot_id}의 최신 잔액:`, latestBalance);
-            } catch (error) {
-                console.error(`봇 ${bot.bot_id}의 잔액 조회 중 오류 발생:`, error);
-                continue; // 잔액 조회 중 오류가 나면 이 봇은 스킵합니다.
-            }
+            // 해당 유저가 스테이킹한 총 금액 조회
+            const totalStakedAmount = await getTotalStakedAmount(botId, user_id);
+            console.log(`봇 ${botId}의 총 스테이킹 금액:`, totalStakedAmount);
 
-            try {
-                totalStakedAmount = await getTotalStakedAmount(botId, user_id);
-                console.log(`봇 ${bot.bot_id}의 총 스테이킹 금액:`, totalStakedAmount);
-            } catch (error) {
-                console.error(`봇 ${bot.bot_id}의 스테이킹 금액 조회 중 오류 발생:`, error);
-                continue; // 스테이킹 금액 조회 중 오류가 나면 이 봇은 스킵합니다.
-            }
-
-            if (latestBalance && totalStakedAmount) {
-                let totalProfitPerBot, dailyProfitPerBot;
-
-                try {
-                    totalProfitPerBot = await getProfitPerBot(botId, user_id);
-                    console.log(`봇 ${bot.bot_id}의 총 수익:`, totalProfitPerBot);
-                } catch (error) {
-                    console.error(`봇 ${bot.bot_id}의 수익 조회 중 오류 발생:`, error);
-                    continue;
-                }
-
-                try {
-                    dailyProfitPerBot = await getProfitPerBot(botId, undefined, true);
-                    console.log(`봇 ${bot.bot_id}의 일일 수익:`, dailyProfitPerBot);
-                } catch (error) {
-                    console.error(`봇 ${bot.bot_id}의 일일 수익 조회 중 오류 발생:`, error);
-                    continue;
-                }
+            // 총 수익 및 일일 수익 계산
+            if (bot && latestBalance && totalStakedAmount) {
+                const totalProfitPerBot = await getProfitPerBot(botId, user_id);
+                const dailyProfitPerBot = await getProfitPerBot(botId, undefined, true);
+                console.log(`봇 ${botId}의 총 수익:`, totalProfitPerBot);
+                console.log(`봇 ${botId}의 일일 수익:`, dailyProfitPerBot);
 
                 totalProfit += totalProfitPerBot * totalStakedAmount;
                 totalBalance += totalStakedAmount;
 
+                // token 조건이 맞는 경우 봇 데이터를 저장
                 if (!token || (token && bot.chain === token)) {
                     botDataMap.set(botId, {
                         bot_id: bot.bot_id,
+                        bot_address: bot.address,
                         bot_name: bot.name,
                         total_investment: totalStakedAmount,
                         current_value: totalStakedAmount * (1 + totalProfitPerBot),
                         daily_pnl: dailyProfitPerBot * totalStakedAmount,
-                        total_profit: totalProfitPerBot * totalStakedAmount,
+                        total_profit: totalProfitPerBot * totalStakedAmount
                     });
                 }
             }
         }
 
+        // Map에 저장된 봇 데이터를 배열로 변환
         const botsData = Array.from(botDataMap.values());
 
-        if (botsData.length === 0) {
-            return res.status(404).json({ error: '조회된 봇 정보가 없습니다.' });
-        }
-
+        // 대시보드 데이터 생성
         const dashboardData = {
             total_balance: totalBalance,
             total_profit: totalProfit,
             total_balance_usdt: totalBalance * NTRNUSDT,
             total_profit_usdt: totalProfit * NTRNUSDT,
-            domesticRage: domesticRage,
-            bots: botsData,
+            bots: botsData
         };
 
-        console.log("대시보드 데이터:", dashboardData);
+        // 대시보드 데이터 로그 출력
+        console.log("생성된 대시보드 데이터:", dashboardData);
 
+        // 클라이언트에 응답
         res.json(dashboardData);
 
     } catch (error) {
-        console.error("오류 발생:", error);
-        res.status(500).json({ error: '서버 내부 오류' });
+        // 오류가 발생한 경우 로그 출력 후 오류 메시지 반환
+        console.error("서버 내부 오류 발생:", error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
