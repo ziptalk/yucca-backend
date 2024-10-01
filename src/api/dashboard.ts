@@ -23,6 +23,8 @@ router.get('/yucca/dashboard', async (req, res) => {
     try {
         const { user_id, token }: QueryParams = req.query;
         // 요청 쿼리에서 user_id와 token 값을 추출.
+        console.log("user_id: ", user_id);
+
 
         if (!user_id) {
             return res.status(400).json({ error: 'User ID is required' });
