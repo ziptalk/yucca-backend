@@ -18,13 +18,12 @@ interface QueryParams {
 const NTRNUSDT = 0.35;// NTRN 토큰의 USDT 환산율을 상수로 정의.
 const domesticRage = 10.3; // 예시에서 요구한 USD/token 값을 상수로 정의.
 
-
 router.get('/yucca/dashboard', async (req, res) => {
     try {
         const { user_id, token }: QueryParams = req.query;
         // 요청 쿼리에서 user_id와 token 값을 추출.
-        console.log("user_id: ", user_id);
 
+        console.log("Received user_id:", user_id);
 
         if (!user_id) {
             return res.status(400).json({ error: 'User ID is required' });
@@ -32,12 +31,16 @@ router.get('/yucca/dashboard', async (req, res) => {
         // user_id가 없으면 400 상태 코드와 함께 오류 메시지 반환.
 
         const user = await User.findOne({ user_id: user_id });
+        console.log("Queried User: ", user); // 유저 정보 확인 로그
+
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
         // MongoDB에서 user_id를 사용해 유저 정보를 조회하고, 유저가 없으면 404 오류 반환.
 
         const bots: iBot[] = await Bot.find({}).exec();
+        console.log("Bots: ", bots); // 봇 정보 확인 로그
+
         const botIds = bots.map(bot => bot.bot_id);
         // Bot 모델에서 모든 봇 데이터를 조회하고, 각 봇의 bot_id를 추출해 배열로 만듦.
 
@@ -94,18 +97,19 @@ router.get('/yucca/dashboard', async (req, res) => {
         };
         // 총 밸런스, 총 수익, 이를 USDT로 환산한 값, 그리고 봇 정보를 포함한 대시보드 데이터를 생성.
 
-        console.log(dashboardData);
+        console.log("Dashboard Data:", dashboardData);
         // 대시보드 데이터를 콘솔에 출력.
 
         res.json(dashboardData);
         // 생성된 대시보드 데이터를 JSON 형태로 클라이언트에 응답.
 
     } catch (error) {
-        console.error(error);
+        console.error("Error occurred:", error);
         res.status(500).json({ error: 'Internal server error' });
         // 에러가 발생하면 500 상태 코드와 함께 오류 메시지를 반환.
     }
 });
+
 
 export default router;
 // 라우터 모듈을 익스포트.
