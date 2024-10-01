@@ -34,6 +34,10 @@ router.get('/yucca/dashboard', async (req, res) => {
         const bots: iBot[] = await Bot.find({}).exec();
         console.log("조회된 봇들: ", bots);
 
+        if (bots.length === 0) {
+            return res.status(404).json({ error: '유저에게 할당된 봇이 없습니다.' });
+        }
+
         const botIds = bots.map(bot => bot.bot_id);
         const botDataMap = new Map<string, any>();
 
@@ -43,21 +47,47 @@ router.get('/yucca/dashboard', async (req, res) => {
         for (let botId of botIds) {
             const bot: iBot | null = await Bot.findOne({ bot_id: botId }).exec();
             if (!bot) {
-                return res.status(404).json({ success: false, message: '봇을 찾을 수 없습니다.' });
+                console.log(`봇 ${botId}를 찾을 수 없습니다.`);
+                continue; // 봇을 찾지 못하면 다음으로 넘어갑니다.
             }
 
-            const latestBalance = await getBalance(bot.address);
-            console.log(`봇 ${bot.bot_id}의 최신 잔액:`, latestBalance);
+            let latestBalance;
+            let totalStakedAmount;
 
-            const totalStakedAmount = await getTotalStakedAmount(botId, user_id);
-            console.log(`봇 ${bot.bot_id}의 총 스테이킹 금액:`, totalStakedAmount);
+            try {
+                latestBalance = await getBalance(bot.address);
+                console.log(`봇 ${bot.bot_id}의 최신 잔액:`, latestBalance);
+            } catch (error) {
+                console.error(`봇 ${bot.bot_id}의 잔액 조회 중 오류 발생:`, error);
+                continue; // 잔액 조회 중 오류가 나면 이 봇은 스킵합니다.
+            }
 
-            if (bot && latestBalance && totalStakedAmount) {
-                const totalProfitPerBot = await getProfitPerBot(botId, user_id);
-                console.log(`봇 ${bot.bot_id}의 총 수익:`, totalProfitPerBot);
+            try {
+                totalStakedAmount = await getTotalStakedAmount(botId, user_id);
+                console.log(`봇 ${bot.bot_id}의 총 스테이킹 금액:`, totalStakedAmount);
+            } catch (error) {
+                console.error(`봇 ${bot.bot_id}의 스테이킹 금액 조회 중 오류 발생:`, error);
+                continue; // 스테이킹 금액 조회 중 오류가 나면 이 봇은 스킵합니다.
+            }
 
-                const dailyProfitPerBot = await getProfitPerBot(botId, undefined, true);
-                console.log(`봇 ${bot.bot_id}의 일일 수익:`, dailyProfitPerBot);
+            if (latestBalance && totalStakedAmount) {
+                let totalProfitPerBot, dailyProfitPerBot;
+
+                try {
+                    totalProfitPerBot = await getProfitPerBot(botId, user_id);
+                    console.log(`봇 ${bot.bot_id}의 총 수익:`, totalProfitPerBot);
+                } catch (error) {
+                    console.error(`봇 ${bot.bot_id}의 수익 조회 중 오류 발생:`, error);
+                    continue;
+                }
+
+                try {
+                    dailyProfitPerBot = await getProfitPerBot(botId, undefined, true);
+                    console.log(`봇 ${bot.bot_id}의 일일 수익:`, dailyProfitPerBot);
+                } catch (error) {
+                    console.error(`봇 ${bot.bot_id}의 일일 수익 조회 중 오류 발생:`, error);
+                    continue;
+                }
 
                 totalProfit += totalProfitPerBot * totalStakedAmount;
                 totalBalance += totalStakedAmount;
@@ -76,6 +106,10 @@ router.get('/yucca/dashboard', async (req, res) => {
         }
 
         const botsData = Array.from(botDataMap.values());
+
+        if (botsData.length === 0) {
+            return res.status(404).json({ error: '조회된 봇 정보가 없습니다.' });
+        }
 
         const dashboardData = {
             total_balance: totalBalance,
