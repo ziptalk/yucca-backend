@@ -2,8 +2,8 @@ import app from './app';
 import {scheduleJob} from 'node-schedule';
 import {saveBotBalance} from './services/balanceService';
 
-const HTTP_PORT = 3007;
-const HTTPS_PORT = 443;
+const HTTP_PORT = process.env.HTTP_PORT;
+const HTTPS_PORT = process.env.HTTPS_PORT;
 
 app.listen(HTTP_PORT, () => {
     console.log(`Server running on port ${HTTP_PORT}`);
