@@ -28,8 +28,10 @@ router.get('/yucca/dashboard', async (req, res) => {
         }
 
         // MongoDB에서 유저 정보 조회
-        const user = await User.findOne({ user_id: user_id }).exec();
-        console.log("조회된 유저 정보:", user);
+        console.log("MongoDB에서 찾을 user_id:", user_id);
+        const user = await User.findOne({ user_id: user_id }).lean();
+        console.log("MongoDB 조회 결과:", user);
+
 
         if (!user) {
             // 유저가 없으면 로그 출력 후 오류 반환
