@@ -29,13 +29,13 @@ router.get('/yucca/dashboard', async (req, res) => {
 
         // MongoDB에서 유저 정보 조회
         console.log("MongoDB에서 찾을 user_id:", user_id);
-        const user = await User.findOne({ user_id: user_id }).lean();
+        const user = await User.find(user_id);
         console.log("MongoDB 조회 결과:", user);
 
 
         if (!user) {
             // 유저가 없으면 로그 출력 후 오류 반환
-            console.error(`User not found: user_id=${user_id}`);
+            console.error(`유저를 찾을 수 없음 : user_id=${user_id}`);
             return res.status(404).json({ error: 'User not found' });
         }
 
