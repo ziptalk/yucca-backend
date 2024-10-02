@@ -10,4 +10,4 @@ const UserSchema = new Schema<iUser>({
     stakeAmount: Number,
 },{collection : 'user'});
 
-export const User = mongoose.model<iUser>('user', UserSchema);
+export const User = mongoose.model<iUser>('User', UserSchema);
