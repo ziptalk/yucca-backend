@@ -24,6 +24,10 @@ if (!dbConnectionString) {
     process.exit(1); // 환경 변수가 없을 경우 서버 종료
 }
 
+// Mongoose 디버그 모드 활성화
+mongoose.set('debug', true);
+
+
 // 기존의 데이터베이스 연결을 종료하고 새로운 연결을 설정합니다.
 mongoose.disconnect().then(() => {
     console.log('Existing database connection closed');
