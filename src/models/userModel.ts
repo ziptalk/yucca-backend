@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, {Document, Schema} from 'mongoose';
 
 export interface iUser extends Document {
     user_id: string;
@@ -8,6 +8,6 @@ export interface iUser extends Document {
 const UserSchema = new Schema<iUser>({
     user_id: String,
     stakeAmount: Number,
-});
+},{collection : 'user'});
 
 export const User = mongoose.model<iUser>('User', UserSchema);
