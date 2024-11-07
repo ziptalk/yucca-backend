@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import { Bot, iBot } from "../models/botModel";
 import { Balance, iBalance } from "../models/balanceModel";
 import {getTotalStakedAmount} from "./botService";
+import {BasicSymbolParam, USDMClient} from "binance"
 
 
 dotenv.config();
@@ -82,6 +83,30 @@ export async function saveBotBalance(){
         console.error(`Failed to save balance:`, error);
     }
 }
+
+export async function getPrice(symbol: string): Promise<any> {
+    const client = new USDMClient({});
+
+    try {
+        const data : BasicSymbolParam = {
+            symbol: symbol
+        }
+        const response = await client.getMarkPrice(data);
+        return response.markPrice
+    } catch (error) {
+        console.error('선물 가격을 가져오는 중 오류 발생:', error);
+        throw error;
+    }
+}
+
+async function displayDomesticRate() {
+    const domesticRate = await getPrice('BTCUSDT');
+    console.log(1 / domesticRate);
+}
+
+// 비동기 함수 호출
+displayDomesticRate();
+
 
 // import axios from 'axios';
 // import * as crypto from 'crypto';
