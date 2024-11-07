@@ -104,10 +104,6 @@ async function displayDomesticRate() {
     console.log(1 / domesticRate);
 }
 
-// 비동기 함수 호출
-displayDomesticRate();
-
-
 // import axios from 'axios';
 // import * as crypto from 'crypto';
 // export async function getBalance(): Promise<number> {
