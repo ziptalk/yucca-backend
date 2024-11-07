@@ -18,6 +18,7 @@ interface BotDetailInformation {
     apy: number;
     winRate: number;
     mdd: number;
+    healthyFactor: number;
 }
 // BotDetailInformation 인터페이스 정의: 봇의 APY, 승률(winRate), MDD를 포함한 세부 정보.
 
@@ -39,7 +40,8 @@ router.get('/yucca/PnLChart', async (req, res) => {
         const botDetailInformation: BotDetailInformation = {
             apy: 15.5,
             winRate: 70,
-            mdd: 11
+            mdd: 11,
+            healthyFactor: 0.5
         };
 
         const dailyPNL: number = await getProfitPerBot(bot.bot_id, user_id, true);
