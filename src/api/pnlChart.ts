@@ -35,6 +35,7 @@ router.get('/yucca/PnLChart', async (req, res) => {
             return res.status(404).json({ error: 'Bot not found' });
         }
 
+
         const timeframeNumber = parseInt(timeframe as string, 10);
 
         const botDetailInformation: BotDetailInformation = {
@@ -44,7 +45,7 @@ router.get('/yucca/PnLChart', async (req, res) => {
             healthyFactor: 0.5
         };
 
-        const dailyPNL: number = await getProfitPerBot(bot.bot_id, user_id, true);
+        const dailyPNL: number = await getProfitPerBot(bot.bot_id, undefined, true);
 
         const pnlData = await Promise.all(
             Array.from({ length: timeframeNumber }, (_, index) => {
