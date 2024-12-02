@@ -19,10 +19,6 @@ router.post('/api/remove/calculate', async (req, res) => {
     // Test log
     const user: iUser[] | null = await User.find({}).exec();
     const bot: iBot[] = await Bot.find({}).exec();
-    console.log("User test log");
-    console.log(user);
-    console.log("Bot test log");
-    console.log(bot);
 
     try {
         const { activeStakes } = await getBotAndActiveStakes(bot_id, user_id);

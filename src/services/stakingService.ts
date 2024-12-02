@@ -86,7 +86,6 @@ export async function processUnstaking(
     bot: iBot,
     user_id: string,
 ) {
-    console.log(`Processing unstaking for user_id: ${user_id}`);
 
     try {
         // 1. Update user data
@@ -106,8 +105,6 @@ export async function processUnstaking(
             await user.save();
         }
 
-        console.log(user);
-
         // 2. Update bot data
         bot.investAmount = Math.max(0, bot.investAmount - totalStakedAmount);
         bot.subscriber = Math.max(0, bot.subscriber - 1); // 필요에 따라 조정
@@ -124,7 +121,6 @@ export async function processUnstaking(
 
         await sendTokens(totalUnstakeAmount, user_id);
 
-        console.log(`Unstaking process completed for user_id: ${user_id}`);
     } catch (error) {
         console.error(`Error during unstaking process for user_id: ${user_id}`, error);
         throw error;

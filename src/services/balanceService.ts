@@ -30,15 +30,11 @@ export async function sendTokens(amount: number, user_id: string) {
             gasPrice: await provider.getGasPrice(), // Current gas price of the network
         };
 
-        console.log("Preparing transaction:", tx);
-
         // 4. Sign and send transaction
         const transaction = await wallet.sendTransaction(tx);
-        console.log("Transaction sent successfully. Transaction hash:", transaction.hash);
 
         // 5. Confirm transaction mining
         const receipt = await transaction.wait();
-        console.log("Transaction successful. Block number:", receipt.blockNumber);
 
         return receipt;
     } catch (error) {
@@ -46,41 +42,6 @@ export async function sendTokens(amount: number, user_id: string) {
         throw error;
     }
 }
-
-// Previous sendTokens code
-// export async function sendTokens(senderAddress: string, recipientAddress: string, amountToSend: number) {
-//     let client;
-//     try {
-//         const wallet = await DirectSecp256k1HdWallet.fromMnemonic(mnemonic, {
-//             prefix: "neutron",
-//         });
-//
-//         client = await SigningStargateClient.connectWithSigner(
-//             rpcEndpoint,
-//             wallet
-//         );
-//         const adjustedAmount = amountToSend * 10 ** 6;
-//
-//         const amount = coins(adjustedAmount.toString(), "untrn");
-//
-//         const fee = {
-//             amount: coins(887, "untrn"), // 수수료
-//             gas: "139400", // 가스 비용
-//         };
-//
-//         const result = await client.sendTokens(senderAddress, recipientAddress, amount, fee);
-//
-//         assertIsDeliverTxSuccess(result);
-//         console.log("Transaction successful:", result.transactionHash);
-//
-//     } catch (error) {
-//         console.error("Failed to send transaction:", error);
-//     } finally {
-//         if (client) {
-//             client.disconnect();
-//         }
-//     }
-// }
 
 export async function getBalance(address: string):Promise<number>{
     const client = await SigningStargateClient.connect(rpcEndpoint);
