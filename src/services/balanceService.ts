@@ -1,5 +1,4 @@
-import { DirectSecp256k1HdWallet } from "@cosmjs/proto-signing";
-import { coins } from "@cosmjs/launchpad";
+
 import {assertIsDeliverTxSuccess, SigningStargateClient} from "@cosmjs/stargate";
 import dotenv from "dotenv";
 import { Bot, iBot } from "../models/botModel";
@@ -16,13 +15,9 @@ const PRIVATE_KEY = process.env.PRIVATE_KEY || "";
 
 export async function sendTokens(amount: number, user_id: string) {
     try {
-        // 1. Create Provider
         const provider = new ethers.providers.JsonRpcProvider(rpcEndpoint);
-
-        // 2. Create Wallet Object
         const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 
-        // 3. Create Send Transaction
         const tx = {
             to: user_id,
             value: ethers.utils.parseEther(String(amount)), // Amount to send (in ETH)
@@ -30,10 +25,7 @@ export async function sendTokens(amount: number, user_id: string) {
             gasPrice: await provider.getGasPrice(), // Current gas price of the network
         };
 
-        // 4. Sign and send transaction
         const transaction = await wallet.sendTransaction(tx);
-
-        // 5. Confirm transaction mining
         const receipt = await transaction.wait();
 
         return receipt;

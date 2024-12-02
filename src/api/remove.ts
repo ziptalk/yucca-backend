@@ -1,6 +1,5 @@
 import express from 'express';
-import { iUser, User } from '../models/userModel';
-import { Bot, iBot } from '../models/botModel';
+import { User } from '../models/userModel';
 import {
     // validateUnstakableDate,
     getBotAndActiveStakes,
@@ -14,11 +13,6 @@ const router = express.Router();
 // Unstaking amount calculation API
 router.post('/api/remove/calculate', async (req, res) => {
     const { user_id, bot_id } = req.body;
-
-
-    // Test log
-    const user: iUser[] | null = await User.find({}).exec();
-    const bot: iBot[] = await Bot.find({}).exec();
 
     try {
         const { activeStakes } = await getBotAndActiveStakes(bot_id, user_id);
@@ -55,12 +49,9 @@ router.post('/api/remove/final', async (req, res) => {
         }
         validateAllStakesUnstakable(activeStakes);
 
-        //validateUnstakableDate(activeStakes[activeStakes.length - 1]);
-
         const [totalStakedAmount, totalUnstakeAmount] = await calculateEligibleUnstakingAmount(activeStakes);
         const adjustedUnstakeAmount = parseFloat(totalUnstakeAmount.toFixed(6));
 
-        //filtering validate stakes
         const eligibleStakes = activeStakes.filter(stake => {
             const stakeDate = new Date(stake.timestamp);
             const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
@@ -71,10 +62,8 @@ router.post('/api/remove/final', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Unstaking not allowed. No eligible stakes found (must be older than 3 days).' });
         }
 
-        // Process unstaking
         await processUnstaking(totalStakedAmount, adjustedUnstakeAmount, eligibleStakes, bot, user_id);
 
-        // Retrieve user information again (including updated stakeAmount)
         const user = await User.findOne({ user_id: user_id }).exec();
         if (!user) {
             throw { status: 404, message: "User not found after unstaking." };
