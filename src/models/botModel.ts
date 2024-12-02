@@ -19,5 +19,6 @@ const BotSchema = new Schema<iBot>({
     created_at: Date,
     chain: String,
 });
+//}, { collection: 'bot' });
 
 export const Bot = mongoose.model<iBot>('Bot', BotSchema);
