@@ -1,5 +1,4 @@
 
-import {assertIsDeliverTxSuccess, SigningStargateClient} from "@cosmjs/stargate";
 import dotenv from "dotenv";
 import { Bot, iBot } from "../models/botModel";
 import { Balance, iBalance } from "../models/balanceModel";
@@ -35,17 +34,24 @@ export async function sendTokens(amount: number, user_id: string) {
     }
 }
 
-export async function getBalance(address: string):Promise<number>{
-    const client = await SigningStargateClient.connect(rpcEndpoint);
+export async function getBalance(address: string): Promise<number> {
+    try {
+        const provider = new ethers.providers.JsonRpcProvider(rpcEndpoint, {
+            name: "kaia",
+            chainId: 8217,
+        });
 
-    const balance = await client.getBalance(address, "untrn");
+        // wei
+        const balanceInWei = await provider.getBalance(address);
 
-    if(!balance){
-        throw new Error(`Failed to get balance for address ${address}`);
+        // wei to KAIA
+        const balanceInKaia = parseFloat(ethers.utils.formatEther(balanceInWei));
+
+        return balanceInKaia;
+    } catch (error) {
+        console.error(`Failed to fetch balance for address ${address}:`, error);
+        throw error;
     }
-    client.disconnect();
-
-    return Number(balance.amount) / 10 ** 6;
 }
 
 export async function saveBotBalance(){
