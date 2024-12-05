@@ -11,7 +11,7 @@ import {
 const router = express.Router();
 
 // Unstaking amount calculation API
-router.post('/api/remove/calculate', async (req, res) => {
+router.post('/yucca/remove/calculate', async (req, res) => {
     const { user_id, bot_id } = req.body;
 
     try {
@@ -39,7 +39,7 @@ router.post('/api/remove/calculate', async (req, res) => {
 });
 
 // Unstaking final processing API
-router.post('/api/remove/final', async (req, res) => {
+router.post('/yucca/remove/final', async (req, res) => {
     const { user_id, bot_id } = req.body;
 
     try {
