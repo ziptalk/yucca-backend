@@ -35,17 +35,19 @@ export async function sendTokens(amount: number, user_id: string) {
     }
 }
 
-export async function getBalance(address: string):Promise<number>{
-    const client = await SigningStargateClient.connect(rpcEndpoint);
+export async function getBalance(address: string): Promise<number> {
+    try {
+        const provider = new ethers.providers.JsonRpcProvider(rpcEndpoint);
 
-    const balance = await client.getBalance(address, "untrn");
+        const balanceInWei = await provider.getBalance(address);
 
-    if(!balance){
-        throw new Error(`Failed to get balance for address ${address}`);
+        const balanceInKaia = parseFloat(ethers.utils.formatEther(balanceInWei));
+
+        return balanceInKaia;
+    } catch (error) {
+        console.error(`Failed to fetch balance for address ${address}:`, error);
+        throw error;
     }
-    client.disconnect();
-
-    return Number(balance.amount) / 10 ** 6;
 }
 
 export async function saveBotBalance(){
