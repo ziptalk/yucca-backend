@@ -5,8 +5,8 @@
 Clone the repository:
 
 ```bash
-git clone https://github.com/ziptalk/neutronapi-backend.git
-cd neutronapi-backend
+git clone https://github.com/ziptalk/yucca-backend.git
+cd yucca-backend
 ```
 
 Install dependencies:
