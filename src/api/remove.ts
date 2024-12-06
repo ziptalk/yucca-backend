@@ -19,8 +19,18 @@ const PRIVATE_KEY = process.env.PRIVATE_KEY || "";
 const QVE_TOKEN_ADDRESS = process.env.QVE_TOKEN_ADDRESS || ""; // qveToken
 const TOKEN_VAULT_ADDRESS = process.env.TOKEN_VAULT_ADDRESS || ""; // tokenVault
 
-import TokenVault from '../../TokenVault.json';
-const TokenABI = TokenVault.abi;
+const ERC20_ABI = [
+    {
+        "constant": false,
+        "inputs": [
+            { "name": "_spender", "type": "address" },
+            { "name": "_value", "type": "uint256" }
+        ],
+        "name": "approve",
+        "outputs": [{ "name": "success", "type": "bool" }],
+        "type": "function"
+    }
+];
 
 const router = express.Router();
 
@@ -41,7 +51,7 @@ router.post('/yucca/remove/calculate', async (req, res) => {
         // approve request
         const provider = new ethers.providers.JsonRpcProvider(rpcEndpoint);
         const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
-        const contract = new ethers.Contract(QVE_TOKEN_ADDRESS, TokenABI, wallet);
+        const contract = new ethers.Contract(QVE_TOKEN_ADDRESS, ERC20_ABI, wallet);
 
         const approveTx = await contract.approve(
             TOKEN_VAULT_ADDRESS,
