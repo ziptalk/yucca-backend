@@ -4,4 +4,3 @@ dist
 .idea
 .vscode
 src/test.ts
-TokenVault.json
