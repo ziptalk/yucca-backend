@@ -7,6 +7,20 @@ import {
     processUnstaking,
     calculateEligibleUnstakingAmount, validateAllStakesUnstakable
 } from "../services/stakingService";
+import { ethers } from "ethers";
+import dotenv from "dotenv";
+
+dotenv.config();
+const rpcEndpoint = process.env.RPC_ENDPOINT || "";
+// Private key of the Kaiya wallet
+const PRIVATE_KEY = process.env.PRIVATE_KEY || "";
+
+// Contract
+const QVE_TOKEN_ADDRESS = process.env.QVE_TOKEN_ADDRESS || ""; // qveToken
+const TOKEN_VAULT_ADDRESS = process.env.TOKEN_VAULT_ADDRESS || ""; // tokenVault
+
+import TokenVault from '../../TokenVault.json';
+const TokenABI = TokenVault.abi;
 
 const router = express.Router();
 
@@ -15,7 +29,7 @@ router.post('/yucca/remove/calculate', async (req, res) => {
     const { user_id, bot_id } = req.body;
 
     try {
-        const { activeStakes } = await getBotAndActiveStakes(bot_id, user_id);
+        const { activeStakes, bot } = await getBotAndActiveStakes(bot_id, user_id);
         if (activeStakes.length === 0) {
             return res.status(404).json({ success: false, message: 'No active stakes found.' });
         }
@@ -24,11 +38,23 @@ router.post('/yucca/remove/calculate', async (req, res) => {
         const [totalStakedAmount, totalUnstakeAmount] = await calculateUnstakingAmount(user_id);
         const adjustedUnstakeAmount = parseFloat(totalUnstakeAmount.toFixed(6));
 
+        // approve request
+        const provider = new ethers.providers.JsonRpcProvider(rpcEndpoint);
+        const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+        const contract = new ethers.Contract(QVE_TOKEN_ADDRESS, TokenABI, wallet);
+
+        const approveTx = await contract.approve(
+            TOKEN_VAULT_ADDRESS,
+            ethers.utils.parseUnits(String(adjustedUnstakeAmount), "ether")
+        );
+        await approveTx.wait();
+
         return res.json({
             success: true,
             unstakedAmount: adjustedUnstakeAmount,
             totalStakedAmount: totalStakedAmount,
-            totalUnstakeAmount: totalUnstakeAmount
+            totalUnstakeAmount: totalUnstakeAmount,
+            message: 'Approval request sent successfully.',
         });
     } catch (error: any) {
         console.error('Error occurred:', error.message);
