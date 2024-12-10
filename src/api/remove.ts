@@ -18,6 +18,7 @@ const PRIVATE_KEY = process.env.PRIVATE_KEY || "";
 // Contract
 const QVE_TOKEN_ADDRESS = process.env.QVE_TOKEN_ADDRESS || ""; // qveToken
 const TOKEN_VAULT_ADDRESS = process.env.TOKEN_VAULT_ADDRESS || ""; // tokenVault
+const Wklay_ADDRESS = process.env.Wklay_ADDRESS || ""; // Wklay
 
 const ERC20_ABI = [
     {
@@ -51,10 +52,10 @@ router.post('/yucca/remove/calculate', async (req, res) => {
         // approve request
         const provider = new ethers.providers.JsonRpcProvider(rpcEndpoint);
         const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
-        const contract = new ethers.Contract(TOKEN_VAULT_ADDRESS, ERC20_ABI, wallet);
+        const contract = new ethers.Contract(Wklay_ADDRESS, ERC20_ABI, wallet); // wKLAY 주소 사용
 
         const approveTx = await contract.approve(
-            TOKEN_VAULT_ADDRESS,
+            TOKEN_VAULT_ADDRESS, // TokenVault 주소
             ethers.utils.parseUnits(String(adjustedUnstakeAmount), "ether")
         );
         await approveTx.wait();
