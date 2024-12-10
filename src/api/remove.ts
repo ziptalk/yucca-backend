@@ -51,7 +51,7 @@ router.post('/yucca/remove/calculate', async (req, res) => {
         // approve request
         const provider = new ethers.providers.JsonRpcProvider(rpcEndpoint);
         const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
-        const contract = new ethers.Contract(QVE_TOKEN_ADDRESS, ERC20_ABI, wallet);
+        const contract = new ethers.Contract(TOKEN_VAULT_ADDRESS, ERC20_ABI, wallet);
 
         const approveTx = await contract.approve(
             TOKEN_VAULT_ADDRESS,
