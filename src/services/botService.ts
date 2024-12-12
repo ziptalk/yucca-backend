@@ -63,6 +63,7 @@ async function calculatePnlRate(botId: string, startDate: Date, endDate: Date, s
     }).sort({ timestamp: -1 }).exec();
 
     if (!firstBalance || !lastBalance || firstBalance.balanceRate === 0) {
+        console.warn(`Invalid balance data for bot ${botId}`);
         return 0;
     }
     let totalPnlRate = 1;

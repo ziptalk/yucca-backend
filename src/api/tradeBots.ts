@@ -50,7 +50,7 @@ router.get('/yucca/trade-bots', async (req, res) => {
                     bot_id: bot.bot_id,
                     name: bot.name,
                     subscriber: bot.subscriber,
-                    total_profits: totalProfits.toFixed(2),
+                    total_profits: isFinite(totalProfits) ? totalProfits.toFixed(2) : '0.00',
                     // 수익을 소수점 2자리까지 표현.
                     apy: APY,
                     // APY는 상수로 정의된 15.5를 반환.

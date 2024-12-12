@@ -62,14 +62,7 @@ export async function calculateUnstakingAmount(user_id: string): Promise<[number
     return [totalStakedAmount, totalUnstakeAmount];
 }
 
-export async function processUnstaking(
-    totalStakedAmount: number,
-    totalUnstakeAmount: number,
-    eligibleStakes: iStakeInfo[],
-    bot: iBot,
-    user_id: string,
-) {
-
+export async function processUnstaking(totalStakedAmount: number, totalUnstakeAmount: number, eligibleStakes: iStakeInfo[], bot: iBot, user_id: string,) {
     try {
         const user = await User.findOneAndUpdate(
             { user_id: user_id },
@@ -87,11 +80,15 @@ export async function processUnstaking(
         }
 
         bot.investAmount = Math.max(0, bot.investAmount - totalStakedAmount);
-        bot.subscriber = Math.max(0, bot.subscriber - 1); // 필요에 따라 조정
+        bot.subscriber = Math.max(0, bot.subscriber - 1);
         await bot.save();
 
-        const stakeIdsToDelete = eligibleStakes.map(stake => stake._id);
-        await StakeInfo.deleteMany({ _id: { $in: stakeIdsToDelete } }).exec();
+        for (const stake of eligibleStakes) {
+            stake.status = 1;
+            stake.unstakedAt = new Date();
+            stake.unstakedAmount = totalStakedAmount;
+            await stake.save();
+        }
 
         if (!user_id) {
             throw { status: 400, message: "Receive address is not provided." };
