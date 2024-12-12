@@ -60,11 +60,19 @@ export async function saveBotBalance(){
             const latestBalance = await getBalance(bot.address);
             const stakeAmount = await getTotalStakedAmount(bot.bot_id)
 
+            let balanceRate: number;
+            if (stakeAmount === 0) {
+                console.warn(`Stake amount is zero for bot ${bot.bot_id}, setting balanceRate to 0.`);
+                balanceRate = 0;
+            } else {
+                balanceRate = latestBalance / stakeAmount;
+            }
+
             const balance: iBalance = new Balance({
                 bot_id: bot.bot_id,
                 timestamp: new Date(),
                 balance: latestBalance,
-                balanceRate: latestBalance / stakeAmount,
+                balanceRate: balanceRate,
             });
 
             await balance.save();
