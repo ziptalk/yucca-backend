@@ -107,7 +107,7 @@ async function generatePnlData(botId: string, userId: string, timeframeNumber: n
         Array.from({ length: timeframeNumber }, async (_, index) => {
             const endDate = new Date();
             endDate.setDate(endDate.getDate() - index);
-            const pnlRate = await getProfitPerBot(botId, userId, false, endDate);
+            const pnlRate = await getProfitPerBot(botId, userId,  endDate);
             return {
                 date: endDate,
                 pnlRate: pnlRate

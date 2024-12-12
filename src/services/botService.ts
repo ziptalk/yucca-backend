@@ -14,7 +14,7 @@ export const getTotalInvestAmount = async (): Promise<number> => {
     return totalInvestAmount[0]?.total_invest_amount || 0;
 }
 
-export const getProfitPerBot = async (botId: string, userId?: string, isDaily?: boolean, endDate?: Date): Promise<number> => {
+export const getProfitPerBot = async (botId: string, userId?: string, endDate?: Date): Promise<number> => {
     const bot: iBot | null = await Bot.findOne({ bot_id: botId }).exec();
     if (!bot) {
         throw new Error('Bot not found');
@@ -23,94 +23,66 @@ export const getProfitPerBot = async (botId: string, userId?: string, isDaily?: 
     let startDate: Date;
     const actualEndDate = endDate || new Date();
 
-    if (isDaily) {
-        if (userId) {
-            throw new Error('Daily profit is not supported for individual users');
-        }
-        startDate = new Date(actualEndDate.getTime() - 24 * 60 * 60 * 1000);
+    if (userId) {
+        const firstStake = await StakeInfo.findOne({ bot_id: botId, user_id: userId, status:0 }).sort({ timestamp: 1 }).exec();
+        startDate = firstStake ? firstStake.timestamp : new Date(0);
     } else {
-        if (userId) {
-            const firstStake = await StakeInfo.findOne({ bot_id: botId, user_id: userId }).sort({ timestamp: 1 }).exec();
-            startDate = firstStake ? firstStake.timestamp : new Date(0);
-        } else {
-            const firstBalance = await Balance.findOne({ bot_id: botId }).sort({ timestamp: 1 }).exec();
-            startDate = firstBalance ? firstBalance.timestamp : new Date(0);
-        }
+        const firstBalance = await Balance.findOne({ bot_id: botId }).sort({ timestamp: 1 }).exec();
+        startDate = firstBalance ? firstBalance.timestamp : new Date(0);
     }
 
     const stakeInfoQuery: any = { 
         bot_id: botId, 
         timestamp: { $gte: startDate, $lte: actualEndDate } 
     };
-    if (userId) {
-        stakeInfoQuery.user_id = userId;
-    }
+
+    const balanceInfoQuery: any = {
+        bot_id: botId,
+        timestamp: { $gte: startDate, $lte: actualEndDate },
+    };
 
     const stakeInfos = await StakeInfo.find(stakeInfoQuery).sort({ timestamp: 1 }).exec();
-
-    return calculatePnlRate(botId, startDate, actualEndDate, stakeInfos, userId);
+    const balacneInfos = await Balance.find(balanceInfoQuery).sort({ timestamp: 1 }).exec();
+    const filteredStakeInfos = userId ? stakeInfos.slice(1) : stakeInfos;
+    return calculatePnlRate(botId, balacneInfos, filteredStakeInfos);
 };
 
-async function calculatePnlRate(botId: string, startDate: Date, endDate: Date, stakeInfos: iStakeInfo[], userId?: string): Promise<number> {
-    const firstBalance = await Balance.findOne({ 
-        bot_id: botId,
-        timestamp: { $gte: startDate, $lte: endDate }
-    }).sort({ timestamp: 1 }).exec();
+async function calculatePnlRate(botId: string, balacneInfos: iBalance[], stakeInfos: iStakeInfo[]): Promise<number> {
 
-    const lastBalance = await Balance.findOne({ 
-        bot_id: botId,
-        timestamp: { $lte: endDate }
-    }).sort({ timestamp: -1 }).exec();
-
-    if (!firstBalance || !lastBalance) {
-        console.warn(`Invalid balance data for bot ${botId}: No balance found.`);
-        return 0;
-    }
-
-    if (firstBalance.balanceRate === 0 || lastBalance.balanceRate === 0) {
-        console.warn(`Invalid balance data for bot ${botId}: Balance rate is zero.`);
-        return 0;
-    }
-
+    if(balacneInfos.length === 0 ) return 0
+    const lastBalance = balacneInfos[balacneInfos.length-1]
     let totalPnlRate = 1;
-    let prevBalance = firstBalance;
+    let prevBalance = balacneInfos[0];
 
     for (const stakeInfo of stakeInfos) {
-        const balanceBeforeStake = await Balance.findOne({
-            bot_id: botId,
-            timestamp: { $lt: stakeInfo.timestamp }
-        }).sort({ timestamp: -1 }).exec();
+        try {
+            const balanceBeforeStake = await Balance.findOne({
+                bot_id: botId,
+                timestamp: { $lt: stakeInfo.timestamp }
+            }).sort({ timestamp: -1 }).exec();
 
-        const balanceAfterStake = await Balance.findOne({
-            bot_id: botId,
-            timestamp: { $gt: stakeInfo.timestamp }
-        }).sort({ timestamp: 1 }).exec();
+            const balanceAfterStake = await Balance.findOne({
+                bot_id: botId,
+                timestamp: { $gt: stakeInfo.timestamp }
+            }).sort({ timestamp: 1 }).exec();
 
-        if (balanceBeforeStake && balanceAfterStake && prevBalance.balanceRate !== 0) {
-            const pnlRateBeforeStake = (balanceBeforeStake.balanceRate - prevBalance.balanceRate) / prevBalance.balanceRate;
-            
-            if (userId) {
-                const userStakeRatio = stakeInfo.amount / balanceBeforeStake.balance;
-                totalPnlRate *= (1 + pnlRateBeforeStake * userStakeRatio);
-            } else {
+            console.log('balanceBeforeStake:', balanceBeforeStake, 'balanceAfterStake:', balanceAfterStake);
+
+            if (balanceBeforeStake && balanceAfterStake && prevBalance.balanceRate !== 0) {
+                const pnlRateBeforeStake = (balanceBeforeStake.balanceRate - prevBalance.balanceRate) / prevBalance.balanceRate;
                 totalPnlRate *= (1 + pnlRateBeforeStake);
+                prevBalance = balanceAfterStake;
             }
-            
-            prevBalance = balanceAfterStake;
+
+            console.log('totalPnlRate:', totalPnlRate);
+        } catch (error) {
+            console.error('Error in calculatePnlRate loop:', error);
         }
     }
 
     if (prevBalance.balanceRate !== 0) {
         const finalPnlRate = (lastBalance.balanceRate - prevBalance.balanceRate) / prevBalance.balanceRate;
-        
-        // 사용자별 계산인 경우, 마지막 스테이킹 비율에 따라 최종 PNL 조정
-        if (userId && stakeInfos.length > 0) {
-            const lastStakeInfo = stakeInfos[stakeInfos.length - 1];
-            const userStakeRatio = lastStakeInfo.amount / prevBalance.balance;
-            totalPnlRate *= (1 + finalPnlRate * userStakeRatio);
-        } else {
-            totalPnlRate *= (1 + finalPnlRate);
-        }
+        totalPnlRate *= (1 + finalPnlRate);
     }
 
     console.log(`Total PNL Rate: ${totalPnlRate - 1}`);
@@ -118,8 +90,11 @@ async function calculatePnlRate(botId: string, startDate: Date, endDate: Date, s
 }
 
 export const getTotalStakedAmount = async (bot_id: string, user_id?: string): Promise<number> => {
-    let stakeInfos: iStakeInfo[] = [];
-    if(user_id) stakeInfos = await StakeInfo.find({ user_id: user_id, bot_id: bot_id }).exec();
-    else stakeInfos = await StakeInfo.find({ bot_id: bot_id }).exec();
+    let stakeInfos: iStakeInfo[];
+    if (user_id) {
+        stakeInfos = await StakeInfo.find({ user_id: user_id, bot_id: bot_id, status: 0 }).exec();
+    } else {
+        stakeInfos = await StakeInfo.find({ bot_id: bot_id, status: 0 }).exec();
+    }
     return stakeInfos.reduce((sum, stakeInfo) => sum + stakeInfo.amount, 0);
 }
