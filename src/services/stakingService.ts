@@ -80,7 +80,7 @@ export async function processUnstaking(totalStakedAmount: number, totalUnstakeAm
         }
 
         bot.investAmount = Math.max(0, bot.investAmount - totalStakedAmount);
-        bot.subscriber = Math.max(0, bot.subscriber - eligibleStakes.length);
+        bot.subscriber = Math.max(0, bot.subscriber - 1);
         await bot.save();
 
         for (const stake of eligibleStakes) {

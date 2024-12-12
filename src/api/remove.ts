@@ -84,6 +84,7 @@ router.post('/yucca/remove/final', async (req, res) => {
         if (activeStakes.length === 0) {
             return res.status(404).json({ success: false, message: 'No active stakes found.' });
         }
+        // 단 하나라도 날짜가 성립하지 않는 경우 에러 발생
         validateAllStakesUnstakable(activeStakes);
 
         const [totalStakedAmount, totalUnstakeAmount] = await calculateEligibleUnstakingAmount(activeStakes);
