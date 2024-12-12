@@ -26,7 +26,14 @@ router.post('/yucca/deposit', async (req, res) => {
         }
         // bot_id로 해당 봇을 찾고, 봇이 존재하지 않으면 404 오류를 반환.
 
-        bot.subscriber += 1;
+        // 중복 구독자 체크: 이미 해당 봇에 스테이킹한 유저인지 확인
+        const existingStake = await StakeInfo.findOne({ user_id, bot_id, status: 0 }).exec();
+
+        if (!existingStake) {
+            // 기존 스테이킹 정보가 없으면 구독자 수 증가
+            bot.subscriber += 1;
+        }
+
         bot.investAmount += amount;
         await bot.save();
         // 해당 봇의 구독자 수를 1 증가시키고, 투자 금액을 추가한 뒤 저장.
