@@ -43,7 +43,7 @@ export async function getBotAndActiveStakes(bot_id: string, user_id: string) {
         throw { status: 404, message: "Bot not found" };
     }
 
-    const activeStakes: iStakeInfo[] = await StakeInfo.find({ bot_id, user_id }).sort({ timestamp: -1 }).exec();
+    const activeStakes: iStakeInfo[] = await StakeInfo.find({ bot_id, user_id, status: 0 }).sort({ timestamp: -1 }).exec();
     if (activeStakes.length === 0) {
         throw { status: 404, message: "No active stakes found" };
     }

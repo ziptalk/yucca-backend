@@ -50,7 +50,12 @@ router.post('/yucca/deposit', async (req, res) => {
         await newStakeInfo.save();
         // 생성된 스테이킹 정보를 데이터베이스에 저장.
 
-        res.json({ success: true, balance: user.stakeAmount });
+        const totalbalance = await StakeInfo.aggregate([
+            { $match: { user_id: user_id, status: 0 } },
+            { $group: { _id: null, total: { $sum: "$amount" } } }
+        ]);
+
+        res.json({ success: true, balance: totalbalance });
         // 성공적으로 처리된 경우 유저의 현재 스테이킹 잔액을 반환.
 
     } catch (error: any) {
