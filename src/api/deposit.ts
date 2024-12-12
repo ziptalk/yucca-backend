@@ -43,6 +43,7 @@ router.post('/yucca/deposit', async (req, res) => {
             bot_id,
             timestamp: new Date(),
             amount,
+            status: 0,
         });
         // 새로운 스테이킹 정보를 생성. 이 정보는 유저 ID, 봇 ID, 스테이킹 시간, 스테이킹 금액을 포함.
 
