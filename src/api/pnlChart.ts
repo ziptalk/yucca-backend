@@ -45,13 +45,11 @@ router.get('/yucca/PnLChart', async (req, res) => {
             healthyFactor: 0.5
         };
 
-        const dailyPNL: number = await getProfitPerBot(bot.bot_id, undefined, true);
-
         const pnlData = await Promise.all(
             Array.from({ length: timeframeNumber }, (_, index) => {
                 const endDate = new Date();
                 endDate.setDate(endDate.getDate() - index);
-                return getProfitPerBot(bot.bot_id, user_id, false, endDate);
+                return getProfitPerBot(bot.bot_id, user_id, endDate);
             })
         );
 
@@ -61,7 +59,6 @@ router.get('/yucca/PnLChart', async (req, res) => {
             bot_id: bot.bot_id,
             bot_name: bot.name,
             timeframe: timeframeNumber,
-            daily_PnL: dailyPNL.toFixed(2),
             domesticRate: 1 / domesticRate,
             data: pnlData.map((pnlRate, index) => {
                 const date = new Date();
