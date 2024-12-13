@@ -2,6 +2,7 @@ import { iStakeInfo, StakeInfo } from "../models/stakeInfoModel";
 import { Bot, iBot } from "../models/botModel";
 import { User } from "../models/userModel";
 import { sendTokens } from "./balanceService";
+import {getProfitPerBot, getTotalStakedAmount} from "./botService";
 
 export const isStakeUnstakable = (stakeInfo: iStakeInfo): boolean => {
     const stakeDate = new Date(stakeInfo.timestamp);
@@ -51,51 +52,57 @@ export async function getBotAndActiveStakes(bot_id: string, user_id: string) {
     return { bot, activeStakes };
 }
 
-export async function calculateUnstakingAmount(user_id: string): Promise<[number, number]> {
-    const stakes = await StakeInfo.find({ user_id }).exec();
-    if (!stakes || stakes.length === 0) {
-        throw { status: 404, message: "No stakes found" };
-    }
+export async function calculateUnstackingAmount(user_id: string): Promise<[number, number]> {
+    const bots: iBot[] = await Bot.find({}).exec();
+    const botIds = bots.map(bot => bot.bot_id);
 
-    const totalStakedAmount = stakes.reduce((sum, stake) => sum + stake.amount, 0);
-    const totalUnstakeAmount = totalStakedAmount * 0.95; // 예: 5% 수수료 적용
-    return [totalStakedAmount, totalUnstakeAmount];
+    let totalProfitAmount = 0;
+    let totalInvestedAmount = 0;
+
+    for (let botId of botIds) {
+        const bot: iBot | null = await Bot.findOne({ bot_id: botId }).exec();
+        if (!bot) {
+            console.error("Bot not found");
+            continue;
+        }
+        const totalStakedAmount = await getTotalStakedAmount(botId, user_id);
+
+        if (!totalStakedAmount) {
+            continue;
+        }
+
+        const totalProfitPerBotPercentage = await getProfitPerBot(botId, user_id);
+        const totalProfitPerBot = totalProfitPerBotPercentage / 100;
+        const profitAmount = totalStakedAmount * totalProfitPerBot;
+
+        totalInvestedAmount += totalStakedAmount;
+        totalProfitAmount += profitAmount;
+    }
+    totalProfitAmount *= 0.8
+
+    return [totalInvestedAmount, totalInvestedAmount + totalProfitAmount];
+}
+
+async function updateBotInfo(bot: iBot, amount: number) {
+    bot.subscriber = Math.max(0, bot.subscriber - 1);
+    bot.investAmount = Math.max(0, bot.investAmount - amount);
+    await bot.save();
+}
+
+async function updateStakeStatus(activeStakes: iStakeInfo[], unstakedAmount:number) {
+    await Promise.all(activeStakes.map(async (stakeInfo) => {
+        stakeInfo.status = 1;
+        stakeInfo.unstakedAmount = unstakedAmount;
+        stakeInfo.unstakedAt = new Date();
+        await stakeInfo.save();
+    }));
 }
 
 export async function processUnstaking(totalStakedAmount: number, totalUnstakeAmount: number, eligibleStakes: iStakeInfo[], bot: iBot, user_id: string,) {
     try {
-        const user = await User.findOneAndUpdate(
-            { user_id: user_id },
-            { $inc: { stakeAmount: -totalStakedAmount } },
-            { new: true }
-        ).exec();
-
-        if (!user) {
-            throw { status: 404, message: "User not found" };
-        }
-
-        if (user.stakeAmount < 0) {
-            user.stakeAmount = 0;
-            await user.save();
-        }
-
-        bot.investAmount = Math.max(0, bot.investAmount - totalStakedAmount);
-        bot.subscriber = Math.max(0, bot.subscriber - 1);
-        await bot.save();
-
-        for (const stake of eligibleStakes) {
-            stake.status = 1;
-            stake.unstakedAt = new Date();
-            stake.unstakedAmount = stake.amount;
-            await stake.save();
-        }
-
-        if (!user_id) {
-            throw { status: 400, message: "Receive address is not provided." };
-        }
-
         await sendTokens(totalUnstakeAmount, user_id);
-
+        await updateStakeStatus(eligibleStakes, totalUnstakeAmount);
+        await updateBotInfo(bot, totalStakedAmount);
     } catch (error) {
         console.error(`Error during unstaking process for user_id: ${user_id}`, error);
         throw error;

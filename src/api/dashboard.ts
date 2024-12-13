@@ -39,13 +39,14 @@ router.get('/yucca/dashboard', async (req, res) => {
             if (bot && latestBalance && totalStakedAmount) {
                 const totalProfitPerBotPercentage = await getProfitPerBot(bot.bot_id, user_id);
                 const totalProfitPerBot = totalProfitPerBotPercentage / 100;
+                console.log("totalProfitPerBot: ", totalProfitPerBot);
                 const profitAmount = totalStakedAmount * totalProfitPerBot;
 
                 totalInvestedAmount += totalStakedAmount;
                 totalProfit += profitAmount;
 
-                //const firstStake = await StakeInfo.findOne({ user_id, bot_id: bot.bot_id, status: 0 }).sort({ timestamp: 1 }).exec();
-                const firstStake = await StakeInfo.findOne({ user_id, bot_id: bot.bot_id }).sort({ timestamp: 1 }).exec();
+                const firstStake = await StakeInfo.findOne({ user_id, bot_id: bot.bot_id, status: 0 }).sort({ timestamp: 1 }).exec();
+                console.log(firstStake);
                 if (!firstStake) {
                     console.log('No stake info found for user:', user_id);
                     return res.status(404).json({ error: 'No stake info found for user' });

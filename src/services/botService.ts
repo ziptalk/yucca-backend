@@ -44,10 +44,10 @@ export const getProfitPerBot = async (botId: string, userId?: string, endDate?: 
     const stakeInfos = await StakeInfo.find(stakeInfoQuery).sort({ timestamp: 1 }).exec();
     const balacneInfos = await Balance.find(balanceInfoQuery).sort({ timestamp: 1 }).exec();
     const filteredStakeInfos = userId ? stakeInfos.slice(1) : stakeInfos;
-    return calculatePnlRate(botId, balacneInfos, filteredStakeInfos);
+    return calculatePnlRate(botId, balacneInfos, filteredStakeInfos, userId);
 };
 
-async function calculatePnlRate(botId: string, balacneInfos: iBalance[], stakeInfos: iStakeInfo[]): Promise<number> {
+async function calculatePnlRate(botId: string, balacneInfos: iBalance[], stakeInfos: iStakeInfo[], userId?: string): Promise<number> {
 
     if(balacneInfos.length === 0 ) return 0
     const lastBalance = balacneInfos[balacneInfos.length-1]
@@ -70,10 +70,14 @@ async function calculatePnlRate(botId: string, balacneInfos: iBalance[], stakeIn
 
             if (balanceBeforeStake && balanceAfterStake && prevBalance.balanceRate !== 0) {
                 const pnlRateBeforeStake = (balanceBeforeStake.balanceRate - prevBalance.balanceRate) / prevBalance.balanceRate;
-                totalPnlRate *= (1 + pnlRateBeforeStake);
+                if (userId) {
+                    const userStakeRatio = stakeInfo.amount / balanceBeforeStake.balance;
+                    totalPnlRate *= (1 + pnlRateBeforeStake * userStakeRatio);
+                } else {
+                    totalPnlRate *= (1 + pnlRateBeforeStake);
+                }
                 prevBalance = balanceAfterStake;
             }
-
             console.log('totalPnlRate:', totalPnlRate);
         } catch (error) {
             console.error('Error in calculatePnlRate loop:', error);
@@ -82,7 +86,14 @@ async function calculatePnlRate(botId: string, balacneInfos: iBalance[], stakeIn
 
     if (prevBalance.balanceRate !== 0) {
         const finalPnlRate = (lastBalance.balanceRate - prevBalance.balanceRate) / prevBalance.balanceRate;
-        totalPnlRate *= (1 + finalPnlRate);
+        // 사용자별 계산인 경우, 마지막 스테이킹 비율에 따라 최종 PNL 조정
+        if (userId && stakeInfos.length > 0) {
+            const lastStakeInfo = stakeInfos[stakeInfos.length - 1];
+            const userStakeRatio = lastStakeInfo.amount / prevBalance.balance;
+            totalPnlRate *= (1 + finalPnlRate * userStakeRatio);
+        } else {
+            totalPnlRate *= (1 + finalPnlRate);
+        }
     }
 
     console.log(`Total PNL Rate: ${totalPnlRate - 1}`);

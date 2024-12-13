@@ -3,7 +3,7 @@ import { User } from '../models/userModel';
 import {
     // validateUnstakableDate,
     getBotAndActiveStakes,
-    calculateUnstakingAmount,
+    calculateUnstackingAmount,
     processUnstaking,
     calculateEligibleUnstakingAmount, validateAllStakesUnstakable
 } from "../services/stakingService";
@@ -46,7 +46,7 @@ router.post('/yucca/remove/calculate', async (req, res) => {
         }
         validateAllStakesUnstakable(activeStakes);
 
-        const [totalStakedAmount, totalUnstakeAmount] = await calculateUnstakingAmount(user_id);
+        const [totalStakedAmount, totalUnstakeAmount] = await calculateUnstackingAmount(user_id);
         const adjustedUnstakeAmount = parseFloat(totalUnstakeAmount.toFixed(6));
 
         // approve request
@@ -86,28 +86,12 @@ router.post('/yucca/remove/final', async (req, res) => {
         }
         // 단 하나라도 날짜가 성립하지 않는 경우 에러 발생
         validateAllStakesUnstakable(activeStakes);
-
-        const [totalStakedAmount, totalUnstakeAmount] = await calculateEligibleUnstakingAmount(activeStakes);
+        const [totalStakedAmount, totalUnstakeAmount] = await calculateUnstackingAmount(user_id);
         const adjustedUnstakeAmount = parseFloat(totalUnstakeAmount.toFixed(6));
 
-        const eligibleStakes = activeStakes.filter(stake => {
-            const stakeDate = new Date(stake.timestamp);
-            const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
-            return stakeDate <= threeDaysAgo;
-        });
+        await processUnstaking(totalStakedAmount, adjustedUnstakeAmount, activeStakes, bot, user_id);
 
-        if (eligibleStakes.length === 0) {
-            return res.status(400).json({ success: false, message: 'Unstaking not allowed. No eligible stakes found (must be older than 3 days).' });
-        }
-
-        await processUnstaking(totalStakedAmount, adjustedUnstakeAmount, eligibleStakes, bot, user_id);
-
-        const user = await User.findOne({ user_id: user_id }).exec();
-        if (!user) {
-            throw { status: 404, message: "User not found after unstaking." };
-        }
-
-        return res.json({ success: true, message: "Successfully Unstaking", balance: user.stakeAmount });
+        return res.json({ success: true, message: "Remove Successfully"});
     } catch (error: any) {
         console.error('Error occurred:', error.message);
         console.error('Stack trace:', error.stack);
